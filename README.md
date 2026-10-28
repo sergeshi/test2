@@ -1,4 +1,4 @@
-# Level Archaeologist — prototype 0.1
+# Level Archaeologist — prototype 0.2
 
 A small Windows desktop prototype for studying game-level geometry and exporting simplified blockouts to Blender.
 
@@ -66,3 +66,12 @@ The importer accepts this simple schema:
 5. Add Blender collections and metadata export through a generated `.py` script.
 
 Use only game data you own or are authorized to inspect. Prefer official modding tools, documented formats, and offline copies.
+
+
+## Runtime capture (new in 0.2)
+
+The `feature/runtime-capture` branch adds a local-only TCP bridge at `127.0.0.1:47831`. It receives newline-delimited JSON snapshots from a game-side mod/debug exporter and loads their object bounds into the existing blockout workflow.
+
+See [RUNTIME_BRIDGE.md](RUNTIME_BRIDGE.md) for the protocol and limitations. Test the transport by starting the app, clicking **Start local runtime bridge**, and running `py examples/send_runtime_snapshot.py`.
+
+The bridge is not a universal extractor: a per-game adapter is still needed to access geometry via an authorized SDK, modding API, plugin, or debug exporter. It does not read process memory or inject into games.
