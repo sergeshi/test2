@@ -1,0 +1,146 @@
+{
+  "name": "Demo Industrial Level",
+  "units": "meters",
+  "objects": [
+    {
+      "name": "Main floor",
+      "type": "floor",
+      "position": [
+        0,
+        0,
+        -0.15
+      ],
+      "size": [
+        20,
+        14,
+        0.3
+      ]
+    },
+    {
+      "name": "North wall",
+      "type": "wall",
+      "position": [
+        0,
+        7,
+        1.5
+      ],
+      "size": [
+        20,
+        0.3,
+        3
+      ]
+    },
+    {
+      "name": "South wall left",
+      "type": "wall",
+      "position": [
+        -6,
+        -7,
+        1.5
+      ],
+      "size": [
+        8,
+        0.3,
+        3
+      ]
+    },
+    {
+      "name": "South wall right",
+      "type": "wall",
+      "position": [
+        7,
+        -7,
+        1.5
+      ],
+      "size": [
+        6,
+        0.3,
+        3
+      ]
+    },
+    {
+      "name": "West wall",
+      "type": "wall",
+      "position": [
+        -10,
+        0,
+        1.5
+      ],
+      "size": [
+        0.3,
+        14,
+        3
+      ]
+    },
+    {
+      "name": "East wall",
+      "type": "wall",
+      "position": [
+        10,
+        0,
+        1.5
+      ],
+      "size": [
+        0.3,
+        14,
+        3
+      ]
+    },
+    {
+      "name": "Central cover",
+      "type": "prop",
+      "position": [
+        0,
+        0,
+        0.6
+      ],
+      "size": [
+        3,
+        2,
+        1.2
+      ]
+    },
+    {
+      "name": "Pillar A",
+      "type": "pillar",
+      "position": [
+        -4,
+        2,
+        1.5
+      ],
+      "size": [
+        0.8,
+        0.8,
+        3
+      ]
+    },
+    {
+      "name": "Pillar B",
+      "type": "pillar",
+      "position": [
+        4,
+        2,
+        1.5
+      ],
+      "size": [
+        0.8,
+        0.8,
+        3
+      ]
+    },
+    {
+      "name": "Raised platform",
+      "type": "platform",
+      "position": [
+        5,
+        -2,
+        0.5
+      ],
+      "size": [
+        4,
+        3,
+        1
+      ]
+    }
+  ]
+}
