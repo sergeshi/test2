@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import trimesh
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QObject, Signal
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QFrame,
     QHBoxLayout, QLabel, QMainWindow, QMessageBox, QPushButton, QSplitter,
@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
+
+from runtime_bridge import RuntimeBridge
 
 
 SUPPORTED_HINT = "3D files (*.obj *.stl *.ply *.off *.glb *.gltf *.dae *.3mf);;JSON scene (*.json);;All files (*.*)"
@@ -133,6 +135,12 @@ class PreviewCanvas(FigureCanvas):
         self.draw_idle()
 
 
+
+class BridgeSignals(QObject):
+    snapshot_received = Signal(object)
+    status_received = Signal(str)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -143,6 +151,13 @@ class MainWindow(QMainWindow):
         self.blockout_objects = []
         self.level_name = "Untitled"
         self.units = "unknown"
+        self.bridge_signals = BridgeSignals(self)
+        self.bridge_signals.snapshot_received.connect(self.on_runtime_snapshot)
+        self.bridge_signals.status_received.connect(self.on_bridge_status)
+        self.runtime_bridge = RuntimeBridge(
+            on_snapshot=self.bridge_signals.snapshot_received.emit,
+            on_status=self.bridge_signals.status_received.emit,
+        )
 
         root = QWidget()
         root_layout = QVBoxLayout(root)
@@ -180,6 +195,17 @@ class MainWindow(QMainWindow):
         self.path_label.setObjectName("muted")
         input_layout.addWidget(self.path_label)
         side_layout.addWidget(input_group)
+
+        runtime_group = QGroupBox("Runtime capture")
+        runtime_layout = QVBoxLayout(runtime_group)
+        self.runtime_button = QPushButton("Start local runtime bridge")
+        self.runtime_button.clicked.connect(self.toggle_runtime_bridge)
+        runtime_layout.addWidget(self.runtime_button)
+        runtime_hint = QLabel("Receives scene snapshots from a game-side mod / debug exporter on 127.0.0.1:47831.")
+        runtime_hint.setWordWrap(True)
+        runtime_hint.setObjectName("muted")
+        runtime_layout.addWidget(runtime_hint)
+        side_layout.addWidget(runtime_group)
 
         settings_group = QGroupBox("2 · Blockout settings")
         settings_layout = QFormLayout(settings_group)
@@ -259,6 +285,62 @@ class MainWindow(QMainWindow):
             QFrame#previewFrame { border: 1px solid #343b49; border-radius: 10px; }
         """)
         self.statusBar().showMessage("Ready · Start with an authorized geometry file or neutral JSON scene")
+
+    def toggle_runtime_bridge(self):
+        if self.runtime_bridge.running:
+            self.runtime_bridge.stop()
+            self.runtime_button.setText("Start local runtime bridge")
+            return
+        try:
+            self.runtime_bridge.start()
+            self.runtime_button.setText("Stop local runtime bridge")
+        except OSError as exc:
+            QMessageBox.critical(
+                self, "Runtime bridge could not start",
+                f"{exc}\\n\\nPort 47831 may already be in use."
+            )
+
+    def on_bridge_status(self, message):
+        self.statusBar().showMessage(message)
+        if "listening" in message.lower():
+            self.status_label.setText("Waiting for runtime snapshot")
+        elif "stopped" in message.lower():
+            self.status_label.setText("Runtime bridge stopped")
+
+    def on_runtime_snapshot(self, snapshot):
+        try:
+            objects = []
+            for item in snapshot.get("objects", []):
+                pos = np.asarray(item["position"], dtype=float)
+                size = np.asarray(item["size"], dtype=float)
+                bounds = np.vstack([pos - size / 2.0, pos + size / 2.0])
+                objects.append(SceneObject(item["name"], bounds, item.get("type", "runtime")))
+            if not objects:
+                self.statusBar().showMessage("Runtime snapshot received, but it contains no valid objects")
+                return
+            self.source_objects = objects
+            self.blockout_objects = []
+            self.source_path = None
+            self.level_name = snapshot.get("name", "Runtime capture")
+            self.units = snapshot.get("units", "unknown")
+            self.path_label.setText(
+                f"Runtime capture · {snapshot.get('source', 'game adapter')} · {len(objects)} objects"
+            )
+            self.export_button.setEnabled(False)
+            self.export_json_button.setEnabled(True)
+            self.preview_mode.setCurrentIndex(0)
+            self.update_stats(objects)
+            self.refresh_preview()
+            self.status_label.setText(f"Captured · {len(objects)} objects")
+            self.statusBar().showMessage(f"Received runtime snapshot: {len(objects)} objects")
+        except Exception as exc:
+            self.statusBar().showMessage(f"Could not apply runtime snapshot: {exc}")
+
+    def closeEvent(self, event):
+        try:
+            self.runtime_bridge.stop()
+        finally:
+            super().closeEvent(event)
 
     def open_file(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open level geometry", "", SUPPORTED_HINT)
